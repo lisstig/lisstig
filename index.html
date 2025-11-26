@@ -8,70 +8,215 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.9.5/brython_stdlib.js"></script>
     <style>
         body {
-            font-size: 20px;
+            font-family: sans-serif;
+            font-size: 18px;
             padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fafafa;
         }
         input, button {
-            font-size: 20px;
+            font-size: 18px;
             padding: 10px;
-            margin: 5px;
+            margin: 5px 0;
+            width: 100%;
+            box-sizing: border-box;
         }
         .resultat {
             font-weight: bold;
+            color: #2c3e50;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .hoved-resultat {
+            font-weight: bold;
+            color: #fff;
+            background-color: #27ae60;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 1.2em;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        /* Ny stil for advarselen */
+        .advarsel {
+            background-color: #fff3cd; /* Lys gul bakgrunn */
+            color: #856404; /* Mørk gul/brun tekst */
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border: 1px solid #ffeeba;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        hr {
+            margin: 30px 0;
+            border: 1px solid #ddd;
+        }
+        
+        /* Stil for fanene */
+        .meny-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .meny-knapp {
+            width: 49%;
+            background-color: #ddd;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+        .meny-knapp.aktiv {
+            background-color: #3498db;
+            color: white;
         }
     </style>
 </head>
 <body onload="brython()">
-    <h2>Karbohydratkalkulator og Insulinberegner</h2>
-    <p>Karbohydrater per 100g: <input type="number" id="karbohydrater"></p>
-    <p>Vekt (i gram): <input type="number" id="vekt"></p>
-    <button id="beregn">Beregn Karbohydrater</button>
-    <p id="karbohydrat_resultat" class="resultat"></p>
+    
+    <h2>1. Hvor mye karbohydrater?</h2>
+    
+    <div class="meny-container">
+        <button id="btn_velg_kalkulator" class="meny-knapp aktiv">Bruk Kalkulator</button>
+        <button id="btn_velg_direkte" class="meny-knapp">Jeg vet antallet</button>
+    </div>
 
-    <p>Total døgndose insulin (E): <input type="number" id="insulin"></p>
-    <button id="beregn_insulin">Beregn Insulin-faktor</button>
-    <p id="insulin_resultat" class="resultat"></p>
+    <div id="kalkulator_boks">
+        <label>Karbohydrater per 100g:</label>
+        <input type="number" id="karbohydrater" placeholder="F.eks 65">
+        
+        <label>Vekt (i gram):</label>
+        <input type="number" id="vekt" placeholder="F.eks 80">
+        
+        <button id="beregn" style="background-color: #ecf0f1; border: 1px solid #ccc;">Beregn Karbohydrater</button>
+    </div>
 
-    <p>Insulin-karbohydratfaktoren forteller deg hvor mange gram karbohydrater én enhet insulin dekker.</p>
-    <p>Den beregnes ved å dele 500 på din totale døgndose med insulin.</p>
-    <p>Eksempel: Hvis du bruker 50 enheter insulin i døgnet, blir regnestykket 500 / 50 = 10.</p>
-    <p>Dette betyr at 1 enhet insulin dekker 10 gram karbohydrater.</p>
-    <p id="insulin_advarsel"><b></b></p>
+    <div id="direkte_boks" style="display: none;">
+        <label>Total mengde karbohydrater i måltidet:</label>
+        <input type="number" id="direkte_karbo_input" placeholder="F.eks 45">
+        <button id="bruk_direkte" style="background-color: #ecf0f1; border: 1px solid #ccc;">Bruk dette antallet</button>
+    </div>
 
-    <button id="nullstill">Nullstill</button>
+    <p id="karbohydrat_resultat" class="resultat">Ingen karbohydrater registrert enda.</p>
+
+    <hr>
+
+    <h2>2. Beregn din Insulin-faktor</h2>
+    <p><i>(Hvor mange gram karbohydrater 1 enhet insulin dekker)</i></p>
+    
+    <label>Total døgndose insulin (E):</label>
+    <input type="number" id="insulin" placeholder="F.eks 55">
+    
+    <button id="beregn_insulin" style="background-color: #ecf0f1; border: 1px solid #ccc;">Beregn Insulin-faktor</button>
+    <p id="insulin_resultat" class="resultat">Resultat vises her...</p>
+
+    <hr>
+
+    <h2>3. Din anbefalte dose</h2>
+    
+    <p id="total_dose_resultat" class="hoved-resultat">Fyll ut steg 1 og 2 for å se dosen automatisk</p>
+
+    <div class="advarsel">
+        <strong>Viktig:</strong> Denne kalkulatoren er kun ment som et veiledende hjelpemiddel. 
+        Du kjenner din diabetes best. Hvis den foreslåtte dosen ikke stemmer overens med din egen erfaring eller vurdering, skal du alltid stole på din egen dømmekraft.
+    </div>
+
+    <br><br>
+    <button id="nullstill" style="background-color: #e74c3c; color: white;">Nullstill alt</button>
 
     <script type="text/python">
-from browser import document, alert
+from browser import document
 
-def beregn_karbohydrater(ev):
+# Globale variabler
+karbo_i_maltid = 0
+min_faktor = 0
+
+def vis_kalkulator(ev):
+    document['kalkulator_boks'].style.display = 'block'
+    document['direkte_boks'].style.display = 'none'
+    document['btn_velg_kalkulator'].classList.add('aktiv')
+    document['btn_velg_direkte'].classList.remove('aktiv')
+
+def vis_direkte(ev):
+    document['kalkulator_boks'].style.display = 'none'
+    document['direkte_boks'].style.display = 'block'
+    document['btn_velg_kalkulator'].classList.remove('aktiv')
+    document['btn_velg_direkte'].classList.add('aktiv')
+
+def beregn_kalkulator(ev):
+    global karbo_i_maltid
     try:
         karbohydrater = float(document['karbohydrater'].value)
         vekt = float(document['vekt'].value)
-        total_karbohydrater = int((karbohydrater / 100) * vekt) # Fjerner desimaler
-        document['karbohydrat_resultat'].text = f"Matvaren inneholder totalt {total_karbohydrater} gram karbohydrater."
+        karbo_i_maltid = int((karbohydrater / 100) * vekt) 
+        
+        document['karbohydrat_resultat'].text = f"Beregnet: {karbo_i_maltid} gram karbohydrater."
+        oppdater_total()
     except ValueError:
-        document['karbohydrat_resultat'].text = "Ugyldig input. Vennligst skriv inn tall."
+        document['karbohydrat_resultat'].text = "Skriv inn gyldige tall i kalkulatoren."
+
+def bruk_direkte(ev):
+    global karbo_i_maltid
+    try:
+        input_verdi = float(document['direkte_karbo_input'].value)
+        karbo_i_maltid = int(input_verdi)
+        
+        document['karbohydrat_resultat'].text = f"Satt manuelt: {karbo_i_maltid} gram karbohydrater."
+        oppdater_total()
+    except ValueError:
+        document['karbohydrat_resultat'].text = "Skriv inn et gyldig tall."
 
 def beregn_insulin(ev):
+    global min_faktor
     try:
         total_insulin = float(document['insulin'].value)
         if total_insulin == 0:
-            document['insulin_resultat'].text = "Døgndosen insulin kan ikke være null."
+            document['insulin_resultat'].text = "Døgndosen kan ikke være 0."
             return
-        insulin_faktor = int(500 / total_insulin) # Fjerner desimaler
-        document['insulin_resultat'].text = f"Insulin-karbohydratfaktoren din er {insulin_faktor} gram per enhet insulin."
+        
+        min_faktor = int(500 / total_insulin)
+        document['insulin_resultat'].text = f"Din faktor: 1 enhet dekker {min_faktor} gram karbohydrater."
+        oppdater_total()
     except ValueError:
-        document['insulin_resultat'].text = "Ugyldig input for døgndose insulin."
+        document['insulin_resultat'].text = "Skriv inn gyldig døgndose."
+
+def oppdater_total():
+    global karbo_i_maltid, min_faktor
+    
+    if karbo_i_maltid > 0 and min_faktor > 0:
+        # Runder av til heltall
+        dose = int(round(karbo_i_maltid / min_faktor))
+        document['total_dose_resultat'].text = f"Anbefalt dose: {dose} enheter insulin"
+    else:
+        document['total_dose_resultat'].text = "Mangler tall fra steg 1 eller 2..."
 
 def nullstill(ev):
+    global karbo_i_maltid, min_faktor
+    karbo_i_maltid = 0
+    min_faktor = 0
+    
     document['karbohydrater'].value = ""
     document['vekt'].value = ""
-    document['karbohydrat_resultat'].text = ""
+    document['direkte_karbo_input'].value = ""
     document['insulin'].value = ""
-    document['insulin_resultat'].text = ""
-    document['insulin_advarsel'].text = ""
+    
+    document['karbohydrat_resultat'].text = "Ingen karbohydrater registrert enda."
+    document['insulin_resultat'].text = "Resultat vises her..."
+    document['total_dose_resultat'].text = "Fyll ut steg 1 og 2 for å se dosen automatisk"
 
-document['beregn'].bind('click', beregn_karbohydrater)
+# Koblinger
+document['btn_velg_kalkulator'].bind('click', vis_kalkulator)
+document['btn_velg_direkte'].bind('click', vis_direkte)
+
+document['beregn'].bind('click', beregn_kalkulator)
+document['bruk_direkte'].bind('click', bruk_direkte)
 document['beregn_insulin'].bind('click', beregn_insulin)
 document['nullstill'].bind('click', nullstill)
     </script>
