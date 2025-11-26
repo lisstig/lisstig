@@ -12,8 +12,8 @@
             font-size: 18px;
             margin: 0;
             padding: 20px;
-            /* Husk å endre 'bakgrunn.jpg' hvis du bruker eget filnavn */
-            background-image: url('bakgrunn.jpg'); 
+            /* Din lokale fil */
+            background-image: url('bakgrunn_01.png');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -21,14 +21,14 @@
         }
 
         .container {
-            /* ENDRET HER: Fra 0.95 til 0.85 for mer gjennomsiktighet */
+            /* ENDRET: Mer gjennomsiktig (0.85) slik at maten synes bedre */
             background-color: rgba(255, 255, 255, 0.85);
             padding: 30px;
             border-radius: 15px;
             max-width: 800px;
             margin: 0 auto;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            backdrop-filter: blur(5px); /* Gjør bakgrunnen litt "tåkete" bak boksen for bedre lesbarhet */
+            backdrop-filter: blur(3px); /* En liten "blur" effekt på bakgrunnen */
         }
 
         input, button, select {
@@ -44,7 +44,7 @@
         .resultat {
             font-weight: bold;
             color: #2c3e50;
-            background-color: #f0f0f0;
+            background-color: rgba(240, 240, 240, 0.8); /* Også litt gjennomsiktig */
             padding: 10px;
             border-radius: 5px;
             margin-top: 10px;
@@ -54,13 +54,14 @@
         .hoved-resultat {
             font-weight: bold;
             color: #fff;
-            background-color: #27ae60;
+            background-color: #95a5a6; /* Starter grå (nøytral) */
             padding: 15px;
             border-radius: 5px;
             font-size: 1.2em;
             margin-top: 20px;
             text-align: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: background-color 0.3s; /* Myk overgang ved fargebytte */
         }
         
         .advarsel {
@@ -114,12 +115,11 @@
             background-color: #ddd;
         }
 
-        /* Stil for valg av utstyr */
         .utstyr-valg {
             display: flex;
             gap: 20px;
             margin-bottom: 20px;
-            background: #f9f9f9;
+            background: rgba(249, 249, 249, 0.8);
             padding: 15px;
             border-radius: 5px;
             border: 1px solid #eee;
@@ -174,7 +174,7 @@
         <hr>
 
         <h2>2. Din Insulin-faktor</h2>
-        <p><i>(Hvor mange gram karbohydrater 1 enhet insulin dekker)</i></p>
+        <p><i>(Valgfritt: Fyll ut hvis du vil beregne dose)</i></p>
 
         <div class="meny-container">
             <button id="btn_velg_500regel" class="meny-knapp aktiv">Bruk 500-regelen</button>
@@ -197,9 +197,9 @@
 
         <hr>
 
-        <h2>3. Din anbefalte dose</h2>
+        <h2>3. Resultat</h2>
         
-        <div class="utstyr-valg">
+        <div class="utstyr-valg" id="utstyr_valg_boks" style="display: none;">
             <label>
                 <input type="radio" name="utstyr" id="valg_penn" value="penn" checked> 
                 Insulinpenn
@@ -210,9 +210,9 @@
             </label>
         </div>
 
-        <p id="total_dose_resultat" class="hoved-resultat">Fyll ut steg 1 og 2 for å se dosen automatisk</p>
+        <p id="total_dose_resultat" class="hoved-resultat">Resultatet vises her...</p>
 
-        <div class="advarsel">
+        <div class="advarsel" id="advarsel_boks" style="display: none;">
             <strong>Viktig:</strong> Denne kalkulatoren er kun ment som et veiledende hjelpemiddel. 
             Du kjenner din diabetes best. Hvis den foreslåtte dosen ikke stemmer overens med din egen erfaring eller vurdering, skal du alltid stole på din egen dømmekraft.
         </div>
@@ -315,26 +315,43 @@ def bruk_manuell_faktor(ev):
     except ValueError:
         document['insulin_resultat'].text = "Skriv inn et gyldig tall for faktor."
 
-# Steg 3 - OPPDATERT FOR PUMPE
+# Steg 3 - SMART RESULTATBOKS
 def oppdater_total(ev=None):
     global karbo_i_maltid, min_faktor
     
+    # Skjul elementer som standard
+    document['utstyr_valg_boks'].style.display = 'none'
+    document['advarsel_boks'].style.display = 'none'
+
     if karbo_i_maltid > 0 and min_faktor > 0:
-        # Sjekker hvilket valg som er markert
-        er_penn = document['valg_penn'].checked
+        # --- MODUS 1: HAR BÅDE KARBO OG FAKTOR (VIS DOSE) ---
         
+        # Vis utstyrsvalg og advarsel
+        document['utstyr_valg_boks'].style.display = 'flex'
+        document['advarsel_boks'].style.display = 'block'
+        
+        er_penn = document['valg_penn'].checked
         dose_raw = karbo_i_maltid / min_faktor
         
         if er_penn:
-            # Runder til nærmeste heltall for penn
             dose = int(round(dose_raw))
-            document['total_dose_resultat'].text = f"Anbefalt dose: {dose} enheter"
+            tekst = f"Anbefalt dose: {dose} enheter"
         else:
-            # Pumpe: Viser gram (som input) og beregnet dose (som sjekk)
             dose = round(dose_raw, 2)
-            document['total_dose_resultat'].text = f"Legg inn {karbo_i_maltid}g karbo på pumpen (Gir ca {dose} E)"
+            tekst = f"Legg inn {karbo_i_maltid}g karbo på pumpen (Gir ca {dose} E)"
+            
+        document['total_dose_resultat'].text = tekst
+        document['total_dose_resultat'].style.backgroundColor = '#27ae60' # GRØNN for dose
+
+    elif karbo_i_maltid > 0:
+        # --- MODUS 2: HAR BARE KARBO (VIS BARE INNHOLD) ---
+        document['total_dose_resultat'].text = f"Totalt karbohydrater: {karbo_i_maltid} gram"
+        document['total_dose_resultat'].style.backgroundColor = '#3498db' # BLÅ for info
+
     else:
-        document['total_dose_resultat'].text = "Mangler tall fra steg 1 eller 2..."
+        # --- MODUS 3: VENTER PÅ INPUT ---
+        document['total_dose_resultat'].text = "Resultatet vises her..."
+        document['total_dose_resultat'].style.backgroundColor = '#95a5a6' # GRÅ
 
 def nullstill(ev):
     global karbo_i_maltid, min_faktor
@@ -352,7 +369,9 @@ def nullstill(ev):
     
     document['karbohydrat_resultat'].text = "Ingen karbohydrater registrert enda."
     document['insulin_resultat'].text = "Ingen faktor valgt enda."
-    document['total_dose_resultat'].text = "Fyll ut steg 1 og 2 for å se dosen automatisk"
+    
+    # Kjører oppdatering for å nullstille farger og tekst
+    oppdater_total()
 
 # --- OPPSTART ---
 if 'lagret_dose_no' in storage:
