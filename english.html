@@ -12,7 +12,6 @@
             font-size: 18px;
             margin: 0;
             padding: 20px;
-            /* BACKGROUND IMAGE */
             background-image: url('https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=2053&auto=format&fit=crop');
             background-size: cover;
             background-position: center;
@@ -20,9 +19,8 @@
             min-height: 100vh;
         }
 
-        /* CONTENT CONTAINER (White box) */
         .container {
-            background-color: rgba(255, 255, 255, 0.92);
+            background-color: rgba(255, 255, 255, 0.95);
             padding: 30px;
             border-radius: 15px;
             max-width: 800px;
@@ -30,7 +28,7 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
-        input, button {
+        input, button, select {
             font-size: 18px;
             padding: 10px;
             margin: 5px 0;
@@ -63,7 +61,7 @@
         }
         
         .advarsel {
-            background-color: #fff3cd;
+            background-color: #fff3cd; 
             color: #856404;
             padding: 15px;
             border-radius: 5px;
@@ -98,7 +96,7 @@
             background-color: #3498db;
             color: white;
         }
-        
+
         .lang-link {
             float: right;
             text-decoration: none;
@@ -111,6 +109,30 @@
         }
         .lang-link:hover {
             background-color: #ddd;
+        }
+
+        /* Radio buttons style */
+        .utstyr-valg {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #eee;
+            justify-content: center;
+        }
+        .utstyr-valg label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            color: #555;
+        }
+        .utstyr-valg input {
+            width: auto;
+            margin-right: 10px;
+            transform: scale(1.2);
         }
     </style>
 </head>
@@ -148,19 +170,43 @@
 
         <hr>
 
-        <h2>2. Calculate Insulin Ratio</h2>
+        <h2>2. Insulin Ratio (I:C)</h2>
         <p><i>(How many grams of carbs 1 unit of insulin covers)</i></p>
+
+        <div class="meny-container">
+            <button id="btn_velg_500regel" class="meny-knapp aktiv">Use 500 Rule</button>
+            <button id="btn_velg_manuell_faktor" class="meny-knapp">I know my ratio</button>
+        </div>
         
-        <label>Total Daily Dose of insulin (TDD):</label>
-        <input type="number" id="insulin" placeholder="E.g. 55">
-        
-        <button id="beregn_insulin" style="background-color: #ecf0f1; border: 1px solid #ccc;">Calculate Ratio</button>
-        <p id="insulin_resultat" class="resultat">Result will appear here...</p>
+        <div id="faktor_kalkulator_boks">
+            <label>Total Daily Dose of insulin (TDD):</label>
+            <input type="number" id="insulin" placeholder="E.g. 55">
+            <button id="beregn_insulin" style="background-color: #ecf0f1; border: 1px solid #ccc;">Calculate Ratio</button>
+        </div>
+
+        <div id="faktor_manuell_boks" style="display: none;">
+            <label>Your ratio (grams of carb per unit):</label>
+            <input type="number" id="manuell_faktor_input" placeholder="E.g. 2.48 or 10">
+            <button id="bruk_manuell_faktor" style="background-color: #ecf0f1; border: 1px solid #ccc;">Use this ratio</button>
+        </div>
+
+        <p id="insulin_resultat" class="resultat">No ratio selected yet.</p>
 
         <hr>
 
         <h2>3. Your recommended dose</h2>
         
+        <div class="utstyr-valg">
+            <label>
+                <input type="radio" name="utstyr" id="valg_penn" value="penn" checked> 
+                Insulin Pen
+            </label>
+            <label>
+                <input type="radio" name="utstyr" id="valg_pumpe" value="pumpe"> 
+                Insulin Pump
+            </label>
+        </div>
+
         <p id="total_dose_resultat" class="hoved-resultat">Complete step 1 and 2 to see the dose automatically</p>
 
         <div class="advarsel">
@@ -169,16 +215,19 @@
         </div>
 
         <br><br>
-        <button id="nullstill" style="background-color: #e74c3c; color: white;">Reset all (Clears saved dose)</button>
-    
-    </div> <script type="text/python">
-from browser import document
+        <button id="nullstill" style="background-color: #e74c3c; color: white;">Reset all (Clears saved data)</button>
+
+    </div>
+
+    <script type="text/python">
+from browser import document, bind
 from browser.local_storage import storage
 
 # Global variables
 karbo_i_maltid = 0
 min_faktor = 0
 
+# --- TABS ---
 def vis_kalkulator(ev):
     document['kalkulator_boks'].style.display = 'block'
     document['direkte_boks'].style.display = 'none'
@@ -191,13 +240,27 @@ def vis_direkte(ev):
     document['btn_velg_kalkulator'].classList.remove('aktiv')
     document['btn_velg_direkte'].classList.add('aktiv')
 
+def vis_500regel(ev):
+    document['faktor_kalkulator_boks'].style.display = 'block'
+    document['faktor_manuell_boks'].style.display = 'none'
+    document['btn_velg_500regel'].classList.add('aktiv')
+    document['btn_velg_manuell_faktor'].classList.remove('aktiv')
+
+def vis_manuell_faktor(ev):
+    document['faktor_kalkulator_boks'].style.display = 'none'
+    document['faktor_manuell_boks'].style.display = 'block'
+    document['btn_velg_500regel'].classList.remove('aktiv')
+    document['btn_velg_manuell_faktor'].classList.add('aktiv')
+
+# --- CALCULATIONS ---
+
+# Step 1
 def beregn_kalkulator(ev):
     global karbo_i_maltid
     try:
         karbohydrater = float(document['karbohydrater'].value)
         vekt = float(document['vekt'].value)
         karbo_i_maltid = int((karbohydrater / 100) * vekt) 
-        
         document['karbohydrat_resultat'].text = f"Calculated: {karbo_i_maltid} grams of carbs."
         oppdater_total()
     except ValueError:
@@ -208,12 +271,12 @@ def bruk_direkte(ev):
     try:
         input_verdi = float(document['direkte_karbo_input'].value)
         karbo_i_maltid = int(input_verdi)
-        
         document['karbohydrat_resultat'].text = f"Set manually: {karbo_i_maltid} grams of carbs."
         oppdater_total()
     except ValueError:
         document['karbohydrat_resultat'].text = "Please enter a valid number."
 
+# Step 2
 def beregn_insulin(ev):
     global min_faktor
     try:
@@ -222,20 +285,50 @@ def beregn_insulin(ev):
             document['insulin_resultat'].text = "Daily dose cannot be 0."
             return
         
-        storage['saved_dose_en'] = str(total_insulin)
+        storage['saved_dose_en'] = str(total_insulin) 
+        if 'saved_factor_en' in storage: del storage['saved_factor_en']
 
-        min_faktor = int(500 / total_insulin)
-        document['insulin_resultat'].text = f"Your ratio: 1 unit covers {min_faktor} grams of carbs."
+        min_faktor = round(500 / total_insulin, 1)
+        
+        document['insulin_resultat'].text = f"Your ratio (500 Rule): 1 unit covers {min_faktor}g carbs."
         oppdater_total()
     except ValueError:
         document['insulin_resultat'].text = "Please enter a valid daily dose."
 
-def oppdater_total():
+def bruk_manuell_faktor(ev):
+    global min_faktor
+    try:
+        input_faktor = float(document['manuell_faktor_input'].value)
+        if input_faktor == 0:
+            document['insulin_resultat'].text = "Ratio cannot be 0."
+            return
+
+        storage['saved_factor_en'] = str(input_faktor) 
+        if 'saved_dose_en' in storage: del storage['saved_dose_en']
+
+        min_faktor = input_faktor
+        document['insulin_resultat'].text = f"Your ratio (Manual): 1 unit covers {min_faktor}g carbs."
+        oppdater_total()
+    except ValueError:
+        document['insulin_resultat'].text = "Please enter a valid number for ratio."
+
+# Step 3 - UPDATED FOR PUMP
+def oppdater_total(ev=None):
     global karbo_i_maltid, min_faktor
     
     if karbo_i_maltid > 0 and min_faktor > 0:
-        dose = int(round(karbo_i_maltid / min_faktor))
-        document['total_dose_resultat'].text = f"Recommended dose: {dose} units of insulin"
+        er_penn = document['valg_penn'].checked
+        
+        dose_raw = karbo_i_maltid / min_faktor
+        
+        if er_penn:
+            # Round to integer for pen
+            dose = int(round(dose_raw))
+            document['total_dose_resultat'].text = f"Recommended dose: {dose} units"
+        else:
+            # Pump: Show grams (input) and calculated dose (check)
+            dose = round(dose_raw, 2)
+            document['total_dose_resultat'].text = f"Enter {karbo_i_maltid}g carbs in pump (Approx {dose} U)"
     else:
         document['total_dose_resultat'].text = "Waiting for step 1 and 2..."
 
@@ -244,31 +337,44 @@ def nullstill(ev):
     karbo_i_maltid = 0
     min_faktor = 0
     
-    if 'saved_dose_en' in storage:
-        del storage['saved_dose_en']
-    
+    if 'saved_dose_en' in storage: del storage['saved_dose_en']
+    if 'saved_factor_en' in storage: del storage['saved_factor_en']
+
     document['karbohydrater'].value = ""
     document['vekt'].value = ""
     document['direkte_karbo_input'].value = ""
     document['insulin'].value = ""
+    document['manuell_faktor_input'].value = ""
     
     document['karbohydrat_resultat'].text = "No carbs registered yet."
-    document['insulin_resultat'].text = "Result will appear here..."
+    document['insulin_resultat'].text = "No ratio selected yet."
     document['total_dose_resultat'].text = "Complete step 1 and 2 to see the dose automatically"
 
 # --- STARTUP ---
 if 'saved_dose_en' in storage:
     document['insulin'].value = storage['saved_dose_en']
+    vis_500regel(None)
     beregn_insulin(None)
+elif 'saved_factor_en' in storage:
+    document['manuell_faktor_input'].value = storage['saved_factor_en']
+    vis_manuell_faktor(None)
+    bruk_manuell_faktor(None)
 
 # Bindings
 document['btn_velg_kalkulator'].bind('click', vis_kalkulator)
 document['btn_velg_direkte'].bind('click', vis_direkte)
 
+document['btn_velg_500regel'].bind('click', vis_500regel)
+document['btn_velg_manuell_faktor'].bind('click', vis_manuell_faktor)
+
 document['beregn'].bind('click', beregn_kalkulator)
 document['bruk_direkte'].bind('click', bruk_direkte)
 document['beregn_insulin'].bind('click', beregn_insulin)
+document['bruk_manuell_faktor'].bind('click', bruk_manuell_faktor)
 document['nullstill'].bind('click', nullstill)
+
+document['valg_penn'].bind('change', oppdater_total)
+document['valg_pumpe'].bind('change', oppdater_total)
     </script>
 </body>
 </html>
