@@ -41,7 +41,6 @@
             text-align: center;
         }
         
-        /* Warning style */
         .advarsel {
             background-color: #fff3cd;
             color: #856404;
@@ -58,7 +57,6 @@
             border: 1px solid #ddd;
         }
         
-        /* Tabs style */
         .meny-container {
             display: flex;
             justify-content: space-between;
@@ -78,7 +76,6 @@
             color: white;
         }
         
-        /* Language link */
         .lang-link {
             float: right;
             text-decoration: none;
@@ -143,10 +140,11 @@
     </div>
 
     <br><br>
-    <button id="nullstill" style="background-color: #e74c3c; color: white;">Reset all</button>
+    <button id="nullstill" style="background-color: #e74c3c; color: white;">Reset all (Clears saved dose)</button>
 
     <script type="text/python">
 from browser import document
+from browser.local_storage import storage
 
 # Global variables
 karbo_i_maltid = 0
@@ -195,6 +193,9 @@ def beregn_insulin(ev):
             document['insulin_resultat'].text = "Daily dose cannot be 0."
             return
         
+        # SAVE to storage
+        storage['saved_dose_en'] = str(total_insulin)
+
         min_faktor = int(500 / total_insulin)
         document['insulin_resultat'].text = f"Your ratio: 1 unit covers {min_faktor} grams of carbs."
         oppdater_total()
@@ -205,7 +206,6 @@ def oppdater_total():
     global karbo_i_maltid, min_faktor
     
     if karbo_i_maltid > 0 and min_faktor > 0:
-        # Rounds to nearest integer
         dose = int(round(karbo_i_maltid / min_faktor))
         document['total_dose_resultat'].text = f"Recommended dose: {dose} units of insulin"
     else:
@@ -216,6 +216,10 @@ def nullstill(ev):
     karbo_i_maltid = 0
     min_faktor = 0
     
+    # CLEAR storage
+    if 'saved_dose_en' in storage:
+        del storage['saved_dose_en']
+    
     document['karbohydrater'].value = ""
     document['vekt'].value = ""
     document['direkte_karbo_input'].value = ""
@@ -224,6 +228,11 @@ def nullstill(ev):
     document['karbohydrat_resultat'].text = "No carbs registered yet."
     document['insulin_resultat'].text = "Result will appear here..."
     document['total_dose_resultat'].text = "Complete step 1 and 2 to see the dose automatically"
+
+# --- STARTUP ---
+if 'saved_dose_en' in storage:
+    document['insulin'].value = storage['saved_dose_en']
+    beregn_insulin(None)
 
 # Bindings
 document['btn_velg_kalkulator'].bind('click', vis_kalkulator)
