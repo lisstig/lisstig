@@ -324,7 +324,7 @@ def oppdater_total(ev=None):
         
         if er_penn:
             # Runder til nærmeste heltall for penn
-            dose = int(round(dose_raw + 0,5)
+            dose = int(round(dose_raw))
             document['total_dose_resultat'].text = f"Anbefalt dose: {dose} enheter"
         else:
             # Pumpe: Viser gram (som input) og beregnet dose (som sjekk)
