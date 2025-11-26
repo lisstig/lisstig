@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Carb Calculator and Insulin Dosing</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.9.5/brython.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.9.5/brython_stdlib.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            font-size: 18px;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fafafa;
+        }
+        input, button {
+            font-size: 18px;
+            padding: 10px;
+            margin: 5px 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .resultat {
+            font-weight: bold;
+            color: #2c3e50;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .hoved-resultat {
+            font-weight: bold;
+            color: #fff;
+            background-color: #27ae60;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 1.2em;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        /* Warning style */
+        .advarsel {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border: 1px solid #ffeeba;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        hr {
+            margin: 30px 0;
+            border: 1px solid #ddd;
+        }
+        
+        /* Tabs style */
+        .meny-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .meny-knapp {
+            width: 49%;
+            background-color: #ddd;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+        .meny-knapp.aktiv {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        /* Language link */
+        .lang-link {
+            float: right;
+            text-decoration: none;
+            font-size: 0.9em;
+            color: #555;
+            background: #eee;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body onload="brython()">
+    
+    <a href="index.html" class="lang-link">🇳🇴 Norsk versjon</a>
+    <div style="clear: both;"></div>
+
+    <h2>1. How many carbs?</h2>
+    
+    <div class="meny-container">
+        <button id="btn_velg_kalkulator" class="meny-knapp aktiv">Use Calculator</button>
+        <button id="btn_velg_direkte" class="meny-knapp">I know the amount</button>
+    </div>
+
+    <div id="kalkulator_boks">
+        <label>Carbohydrates per 100g:</label>
+        <input type="number" id="karbohydrater" placeholder="E.g. 65">
+        
+        <label>Weight (in grams):</label>
+        <input type="number" id="vekt" placeholder="E.g. 80">
+        
+        <button id="beregn" style="background-color: #ecf0f1; border: 1px solid #ccc;">Calculate Carbs</button>
+    </div>
+
+    <div id="direkte_boks" style="display: none;">
+        <label>Total carbs in meal:</label>
+        <input type="number" id="direkte_karbo_input" placeholder="E.g. 45">
+        <button id="bruk_direkte" style="background-color: #ecf0f1; border: 1px solid #ccc;">Use this amount</button>
+    </div>
+
+    <p id="karbohydrat_resultat" class="resultat">No carbs registered yet.</p>
+
+    <hr>
+
+    <h2>2. Calculate Insulin Ratio</h2>
+    <p><i>(How many grams of carbs 1 unit of insulin covers)</i></p>
+    
+    <label>Total Daily Dose of insulin (TDD):</label>
+    <input type="number" id="insulin" placeholder="E.g. 55">
+    
+    <button id="beregn_insulin" style="background-color: #ecf0f1; border: 1px solid #ccc;">Calculate Ratio</button>
+    <p id="insulin_resultat" class="resultat">Result will appear here...</p>
+
+    <hr>
+
+    <h2>3. Your recommended dose</h2>
+    
+    <p id="total_dose_resultat" class="hoved-resultat">Complete step 1 and 2 to see the dose automatically</p>
+
+    <div class="advarsel">
+        <strong>Important:</strong> This calculator is for guidance only. 
+        You know your diabetes best. If the suggested dose does not match your own experience or judgment, always trust your own judgment.
+    </div>
+
+    <br><br>
+    <button id="nullstill" style="background-color: #e74c3c; color: white;">Reset all</button>
+
+    <script type="text/python">
+from browser import document
+
+# Global variables
+karbo_i_maltid = 0
+min_faktor = 0
+
+def vis_kalkulator(ev):
+    document['kalkulator_boks'].style.display = 'block'
+    document['direkte_boks'].style.display = 'none'
+    document['btn_velg_kalkulator'].classList.add('aktiv')
+    document['btn_velg_direkte'].classList.remove('aktiv')
+
+def vis_direkte(ev):
+    document['kalkulator_boks'].style.display = 'none'
+    document['direkte_boks'].style.display = 'block'
+    document['btn_velg_kalkulator'].classList.remove('aktiv')
+    document['btn_velg_direkte'].classList.add('aktiv')
+
+def beregn_kalkulator(ev):
+    global karbo_i_maltid
+    try:
+        karbohydrater = float(document['karbohydrater'].value)
+        vekt = float(document['vekt'].value)
+        karbo_i_maltid = int((karbohydrater / 100) * vekt) 
+        
+        document['karbohydrat_resultat'].text = f"Calculated: {karbo_i_maltid} grams of carbs."
+        oppdater_total()
+    except ValueError:
+        document['karbohydrat_resultat'].text = "Please enter valid numbers."
+
+def bruk_direkte(ev):
+    global karbo_i_maltid
+    try:
+        input_verdi = float(document['direkte_karbo_input'].value)
+        karbo_i_maltid = int(input_verdi)
+        
+        document['karbohydrat_resultat'].text = f"Set manually: {karbo_i_maltid} grams of carbs."
+        oppdater_total()
+    except ValueError:
+        document['karbohydrat_resultat'].text = "Please enter a valid number."
+
+def beregn_insulin(ev):
+    global min_faktor
+    try:
+        total_insulin = float(document['insulin'].value)
+        if total_insulin == 0:
+            document['insulin_resultat'].text = "Daily dose cannot be 0."
+            return
+        
+        min_faktor = int(500 / total_insulin)
+        document['insulin_resultat'].text = f"Your ratio: 1 unit covers {min_faktor} grams of carbs."
+        oppdater_total()
+    except ValueError:
+        document['insulin_resultat'].text = "Please enter a valid daily dose."
+
+def oppdater_total():
+    global karbo_i_maltid, min_faktor
+    
+    if karbo_i_maltid > 0 and min_faktor > 0:
+        # Rounds to nearest integer
+        dose = int(round(karbo_i_maltid / min_faktor))
+        document['total_dose_resultat'].text = f"Recommended dose: {dose} units of insulin"
+    else:
+        document['total_dose_resultat'].text = "Waiting for step 1 and 2..."
+
+def nullstill(ev):
+    global karbo_i_maltid, min_faktor
+    karbo_i_maltid = 0
+    min_faktor = 0
+    
+    document['karbohydrater'].value = ""
+    document['vekt'].value = ""
+    document['direkte_karbo_input'].value = ""
+    document['insulin'].value = ""
+    
+    document['karbohydrat_resultat'].text = "No carbs registered yet."
+    document['insulin_resultat'].text = "Result will appear here..."
+    document['total_dose_resultat'].text = "Complete step 1 and 2 to see the dose automatically"
+
+# Bindings
+document['btn_velg_kalkulator'].bind('click', vis_kalkulator)
+document['btn_velg_direkte'].bind('click', vis_direkte)
+
+document['beregn'].bind('click', beregn_kalkulator)
+document['bruk_direkte'].bind('click', bruk_direkte)
+document['beregn_insulin'].bind('click', beregn_insulin)
+document['nullstill'].bind('click', nullstill)
+    </script>
+</body>
+</html>
