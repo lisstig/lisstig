@@ -12,7 +12,8 @@
             font-size: 18px;
             margin: 0;
             padding: 20px;
-            background-image: url('bakgrunn_01.png');
+            /* Husk å endre 'bakgrunn.jpg' hvis du bruker eget filnavn */
+            background-image: url('bakgrunn.jpg'); 
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -20,12 +21,14 @@
         }
 
         .container {
-            background-color: rgba(255, 255, 255, 0.95);
+            /* ENDRET HER: Fra 0.95 til 0.85 for mer gjennomsiktighet */
+            background-color: rgba(255, 255, 255, 0.85);
             padding: 30px;
             border-radius: 15px;
             max-width: 800px;
             margin: 0 auto;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            backdrop-filter: blur(5px); /* Gjør bakgrunnen litt "tåkete" bak boksen for bedre lesbarhet */
         }
 
         input, button, select {
@@ -185,197 +188,3 @@
         </div>
 
         <div id="faktor_manuell_boks" style="display: none;">
-            <label>Din insulin-faktor (gram karbo per enhet):</label>
-            <input type="number" id="manuell_faktor_input" placeholder="F.eks 2.48 eller 10">
-            <button id="bruk_manuell_faktor" style="background-color: #ecf0f1; border: 1px solid #ccc;">Bruk denne faktoren</button>
-        </div>
-
-        <p id="insulin_resultat" class="resultat">Ingen faktor valgt enda.</p>
-
-        <hr>
-
-        <h2>3. Din anbefalte dose</h2>
-        
-        <div class="utstyr-valg">
-            <label>
-                <input type="radio" name="utstyr" id="valg_penn" value="penn" checked> 
-                Insulinpenn
-            </label>
-            <label>
-                <input type="radio" name="utstyr" id="valg_pumpe" value="pumpe"> 
-                Insulinpumpe
-            </label>
-        </div>
-
-        <p id="total_dose_resultat" class="hoved-resultat">Fyll ut steg 1 og 2 for å se dosen automatisk</p>
-
-        <div class="advarsel">
-            <strong>Viktig:</strong> Denne kalkulatoren er kun ment som et veiledende hjelpemiddel. 
-            Du kjenner din diabetes best. Hvis den foreslåtte dosen ikke stemmer overens med din egen erfaring eller vurdering, skal du alltid stole på din egen dømmekraft.
-        </div>
-
-        <br><br>
-        <button id="nullstill" style="background-color: #e74c3c; color: white;">Nullstill alt (Sletter også lagret data)</button>
-
-    </div>
-
-    <script type="text/python">
-from browser import document, bind
-from browser.local_storage import storage
-
-# Globale variabler
-karbo_i_maltid = 0
-min_faktor = 0
-
-# --- VISNINGSFUNKSJONER (TABS) ---
-def vis_kalkulator(ev):
-    document['kalkulator_boks'].style.display = 'block'
-    document['direkte_boks'].style.display = 'none'
-    document['btn_velg_kalkulator'].classList.add('aktiv')
-    document['btn_velg_direkte'].classList.remove('aktiv')
-
-def vis_direkte(ev):
-    document['kalkulator_boks'].style.display = 'none'
-    document['direkte_boks'].style.display = 'block'
-    document['btn_velg_kalkulator'].classList.remove('aktiv')
-    document['btn_velg_direkte'].classList.add('aktiv')
-
-def vis_500regel(ev):
-    document['faktor_kalkulator_boks'].style.display = 'block'
-    document['faktor_manuell_boks'].style.display = 'none'
-    document['btn_velg_500regel'].classList.add('aktiv')
-    document['btn_velg_manuell_faktor'].classList.remove('aktiv')
-
-def vis_manuell_faktor(ev):
-    document['faktor_kalkulator_boks'].style.display = 'none'
-    document['faktor_manuell_boks'].style.display = 'block'
-    document['btn_velg_500regel'].classList.remove('aktiv')
-    document['btn_velg_manuell_faktor'].classList.add('aktiv')
-
-# --- BEREGNINGSFUNKSJONER ---
-
-# Steg 1
-def beregn_kalkulator(ev):
-    global karbo_i_maltid
-    try:
-        karbohydrater = float(document['karbohydrater'].value)
-        vekt = float(document['vekt'].value)
-        karbo_i_maltid = int((karbohydrater / 100) * vekt) 
-        document['karbohydrat_resultat'].text = f"Beregnet: {karbo_i_maltid} gram karbohydrater."
-        oppdater_total()
-    except ValueError:
-        document['karbohydrat_resultat'].text = "Skriv inn gyldige tall i kalkulatoren."
-
-def bruk_direkte(ev):
-    global karbo_i_maltid
-    try:
-        input_verdi = float(document['direkte_karbo_input'].value)
-        karbo_i_maltid = int(input_verdi)
-        document['karbohydrat_resultat'].text = f"Satt manuelt: {karbo_i_maltid} gram karbohydrater."
-        oppdater_total()
-    except ValueError:
-        document['karbohydrat_resultat'].text = "Skriv inn et gyldig tall."
-
-# Steg 2
-def beregn_insulin(ev):
-    global min_faktor
-    try:
-        total_insulin = float(document['insulin'].value)
-        if total_insulin == 0:
-            document['insulin_resultat'].text = "Døgndosen kan ikke være 0."
-            return
-        
-        storage['lagret_dose_no'] = str(total_insulin) 
-        if 'lagret_faktor_no' in storage: del storage['lagret_faktor_no']
-
-        min_faktor = round(500 / total_insulin, 1)
-        
-        document['insulin_resultat'].text = f"Din faktor (500-regelen): 1 enhet dekker {min_faktor} gram karbo."
-        oppdater_total()
-    except ValueError:
-        document['insulin_resultat'].text = "Skriv inn gyldig døgndose."
-
-def bruk_manuell_faktor(ev):
-    global min_faktor
-    try:
-        input_faktor = float(document['manuell_faktor_input'].value)
-        if input_faktor == 0:
-            document['insulin_resultat'].text = "Faktoren kan ikke være 0."
-            return
-
-        storage['lagret_faktor_no'] = str(input_faktor) 
-        if 'lagret_dose_no' in storage: del storage['lagret_dose_no']
-
-        min_faktor = input_faktor
-        document['insulin_resultat'].text = f"Din faktor (Manuelt): 1 enhet dekker {min_faktor} gram karbo."
-        oppdater_total()
-    except ValueError:
-        document['insulin_resultat'].text = "Skriv inn et gyldig tall for faktor."
-
-# Steg 3 - OPPDATERT FOR PUMPE
-def oppdater_total(ev=None):
-    global karbo_i_maltid, min_faktor
-    
-    if karbo_i_maltid > 0 and min_faktor > 0:
-        # Sjekker hvilket valg som er markert
-        er_penn = document['valg_penn'].checked
-        
-        dose_raw = karbo_i_maltid / min_faktor
-        
-        if er_penn:
-            # Runder til nærmeste heltall for penn
-            dose = int(round(dose_raw))
-            document['total_dose_resultat'].text = f"Anbefalt dose: {dose} enheter"
-        else:
-            # Pumpe: Viser gram (som input) og beregnet dose (som sjekk)
-            dose = round(dose_raw, 2)
-            document['total_dose_resultat'].text = f"Legg inn {karbo_i_maltid}g karbo på pumpen (Gir ca {dose} E)"
-    else:
-        document['total_dose_resultat'].text = "Mangler tall fra steg 1 eller 2..."
-
-def nullstill(ev):
-    global karbo_i_maltid, min_faktor
-    karbo_i_maltid = 0
-    min_faktor = 0
-    
-    if 'lagret_dose_no' in storage: del storage['lagret_dose_no']
-    if 'lagret_faktor_no' in storage: del storage['lagret_faktor_no']
-
-    document['karbohydrater'].value = ""
-    document['vekt'].value = ""
-    document['direkte_karbo_input'].value = ""
-    document['insulin'].value = ""
-    document['manuell_faktor_input'].value = ""
-    
-    document['karbohydrat_resultat'].text = "Ingen karbohydrater registrert enda."
-    document['insulin_resultat'].text = "Ingen faktor valgt enda."
-    document['total_dose_resultat'].text = "Fyll ut steg 1 og 2 for å se dosen automatisk"
-
-# --- OPPSTART ---
-if 'lagret_dose_no' in storage:
-    document['insulin'].value = storage['lagret_dose_no']
-    vis_500regel(None)
-    beregn_insulin(None)
-elif 'lagret_faktor_no' in storage:
-    document['manuell_faktor_input'].value = storage['lagret_faktor_no']
-    vis_manuell_faktor(None)
-    bruk_manuell_faktor(None)
-
-# Koblinger
-document['btn_velg_kalkulator'].bind('click', vis_kalkulator)
-document['btn_velg_direkte'].bind('click', vis_direkte)
-
-document['btn_velg_500regel'].bind('click', vis_500regel)
-document['btn_velg_manuell_faktor'].bind('click', vis_manuell_faktor)
-
-document['beregn'].bind('click', beregn_kalkulator)
-document['bruk_direkte'].bind('click', bruk_direkte)
-document['beregn_insulin'].bind('click', beregn_insulin)
-document['bruk_manuell_faktor'].bind('click', bruk_manuell_faktor)
-document['nullstill'].bind('click', nullstill)
-
-document['valg_penn'].bind('change', oppdater_total)
-document['valg_pumpe'].bind('change', oppdater_total)
-    </script>
-</body>
-</html>
