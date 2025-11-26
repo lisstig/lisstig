@@ -10,18 +10,36 @@
         body {
             font-family: sans-serif;
             font-size: 18px;
+            margin: 0;
             padding: 20px;
+            /* BACKGROUND IMAGE */
+            background-image: url('https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=2053&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+
+        /* CONTENT CONTAINER (White box) */
+        .container {
+            background-color: rgba(255, 255, 255, 0.92);
+            padding: 30px;
+            border-radius: 15px;
             max-width: 800px;
             margin: 0 auto;
-            background-color: #fafafa;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
+
         input, button {
             font-size: 18px;
             padding: 10px;
             margin: 5px 0;
             width: 100%;
             box-sizing: border-box;
+            border-radius: 5px;
+            border: 1px solid #ccc;
         }
+
         .resultat {
             font-weight: bold;
             color: #2c3e50;
@@ -29,7 +47,9 @@
             padding: 10px;
             border-radius: 5px;
             margin-top: 10px;
+            border: 1px solid #ddd;
         }
+
         .hoved-resultat {
             font-weight: bold;
             color: #fff;
@@ -39,6 +59,7 @@
             font-size: 1.2em;
             margin-top: 20px;
             text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         
         .advarsel {
@@ -54,7 +75,8 @@
 
         hr {
             margin: 30px 0;
-            border: 1px solid #ddd;
+            border: 0;
+            border-top: 1px solid #ddd;
         }
         
         .meny-container {
@@ -64,12 +86,13 @@
         }
         .meny-knapp {
             width: 49%;
-            background-color: #ddd;
+            background-color: #e0e0e0;
             border: none;
             cursor: pointer;
             padding: 10px;
             font-weight: bold;
             color: #555;
+            transition: background-color 0.3s;
         }
         .meny-knapp.aktiv {
             background-color: #3498db;
@@ -84,65 +107,71 @@
             background: #eee;
             padding: 5px 10px;
             border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .lang-link:hover {
+            background-color: #ddd;
         }
     </style>
 </head>
 <body onload="brython()">
     
-    <a href="index.html" class="lang-link">🇳🇴 Norsk versjon</a>
-    <div style="clear: both;"></div>
+    <div class="container">
 
-    <h2>1. How many carbs?</h2>
-    
-    <div class="meny-container">
-        <button id="btn_velg_kalkulator" class="meny-knapp aktiv">Use Calculator</button>
-        <button id="btn_velg_direkte" class="meny-knapp">I know the amount</button>
-    </div>
+        <a href="index.html" class="lang-link">🇳🇴 Norsk versjon</a>
+        <div style="clear: both;"></div>
 
-    <div id="kalkulator_boks">
-        <label>Carbohydrates per 100g:</label>
-        <input type="number" id="karbohydrater" placeholder="E.g. 65">
+        <h2 style="margin-top: 0;">1. How many carbs?</h2>
         
-        <label>Weight (in grams):</label>
-        <input type="number" id="vekt" placeholder="E.g. 80">
+        <div class="meny-container">
+            <button id="btn_velg_kalkulator" class="meny-knapp aktiv">Use Calculator</button>
+            <button id="btn_velg_direkte" class="meny-knapp">I know the amount</button>
+        </div>
+
+        <div id="kalkulator_boks">
+            <label>Carbohydrates per 100g:</label>
+            <input type="number" id="karbohydrater" placeholder="E.g. 65">
+            
+            <label>Weight (in grams):</label>
+            <input type="number" id="vekt" placeholder="E.g. 80">
+            
+            <button id="beregn" style="background-color: #ecf0f1; border: 1px solid #ccc;">Calculate Carbs</button>
+        </div>
+
+        <div id="direkte_boks" style="display: none;">
+            <label>Total carbs in meal:</label>
+            <input type="number" id="direkte_karbo_input" placeholder="E.g. 45">
+            <button id="bruk_direkte" style="background-color: #ecf0f1; border: 1px solid #ccc;">Use this amount</button>
+        </div>
+
+        <p id="karbohydrat_resultat" class="resultat">No carbs registered yet.</p>
+
+        <hr>
+
+        <h2>2. Calculate Insulin Ratio</h2>
+        <p><i>(How many grams of carbs 1 unit of insulin covers)</i></p>
         
-        <button id="beregn" style="background-color: #ecf0f1; border: 1px solid #ccc;">Calculate Carbs</button>
-    </div>
+        <label>Total Daily Dose of insulin (TDD):</label>
+        <input type="number" id="insulin" placeholder="E.g. 55">
+        
+        <button id="beregn_insulin" style="background-color: #ecf0f1; border: 1px solid #ccc;">Calculate Ratio</button>
+        <p id="insulin_resultat" class="resultat">Result will appear here...</p>
 
-    <div id="direkte_boks" style="display: none;">
-        <label>Total carbs in meal:</label>
-        <input type="number" id="direkte_karbo_input" placeholder="E.g. 45">
-        <button id="bruk_direkte" style="background-color: #ecf0f1; border: 1px solid #ccc;">Use this amount</button>
-    </div>
+        <hr>
 
-    <p id="karbohydrat_resultat" class="resultat">No carbs registered yet.</p>
+        <h2>3. Your recommended dose</h2>
+        
+        <p id="total_dose_resultat" class="hoved-resultat">Complete step 1 and 2 to see the dose automatically</p>
 
-    <hr>
+        <div class="advarsel">
+            <strong>Important:</strong> This calculator is for guidance only. 
+            You know your diabetes best. If the suggested dose does not match your own experience or judgment, always trust your own judgment.
+        </div>
 
-    <h2>2. Calculate Insulin Ratio</h2>
-    <p><i>(How many grams of carbs 1 unit of insulin covers)</i></p>
+        <br><br>
+        <button id="nullstill" style="background-color: #e74c3c; color: white;">Reset all (Clears saved dose)</button>
     
-    <label>Total Daily Dose of insulin (TDD):</label>
-    <input type="number" id="insulin" placeholder="E.g. 55">
-    
-    <button id="beregn_insulin" style="background-color: #ecf0f1; border: 1px solid #ccc;">Calculate Ratio</button>
-    <p id="insulin_resultat" class="resultat">Result will appear here...</p>
-
-    <hr>
-
-    <h2>3. Your recommended dose</h2>
-    
-    <p id="total_dose_resultat" class="hoved-resultat">Complete step 1 and 2 to see the dose automatically</p>
-
-    <div class="advarsel">
-        <strong>Important:</strong> This calculator is for guidance only. 
-        You know your diabetes best. If the suggested dose does not match your own experience or judgment, always trust your own judgment.
-    </div>
-
-    <br><br>
-    <button id="nullstill" style="background-color: #e74c3c; color: white;">Reset all (Clears saved dose)</button>
-
-    <script type="text/python">
+    </div> <script type="text/python">
 from browser import document
 from browser.local_storage import storage
 
@@ -193,7 +222,6 @@ def beregn_insulin(ev):
             document['insulin_resultat'].text = "Daily dose cannot be 0."
             return
         
-        # SAVE to storage
         storage['saved_dose_en'] = str(total_insulin)
 
         min_faktor = int(500 / total_insulin)
@@ -216,7 +244,6 @@ def nullstill(ev):
     karbo_i_maltid = 0
     min_faktor = 0
     
-    # CLEAR storage
     if 'saved_dose_en' in storage:
         del storage['saved_dose_en']
     
