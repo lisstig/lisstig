@@ -111,7 +111,7 @@
             background-color: #ddd;
         }
 
-        /* Stil for valg av utstyr (Radio buttons) */
+        /* Stil for valg av utstyr */
         .utstyr-valg {
             display: flex;
             gap: 20px;
@@ -120,15 +120,19 @@
             padding: 15px;
             border-radius: 5px;
             border: 1px solid #eee;
+            justify-content: center;
         }
         .utstyr-valg label {
             cursor: pointer;
             display: flex;
             align-items: center;
+            font-weight: bold;
+            color: #555;
         }
         .utstyr-valg input {
             width: auto;
             margin-right: 10px;
+            transform: scale(1.2);
         }
     </style>
 </head>
@@ -195,11 +199,11 @@
         <div class="utstyr-valg">
             <label>
                 <input type="radio" name="utstyr" id="valg_penn" value="penn" checked> 
-                Insulinpenn (Heltall)
+                Insulinpenn
             </label>
             <label>
                 <input type="radio" name="utstyr" id="valg_pumpe" value="pumpe"> 
-                Insulinpumpe (Desimaler)
+                Insulinpumpe
             </label>
         </div>
 
@@ -308,7 +312,7 @@ def bruk_manuell_faktor(ev):
     except ValueError:
         document['insulin_resultat'].text = "Skriv inn et gyldig tall for faktor."
 
-# Steg 3
+# Steg 3 - OPPDATERT FOR PUMPE
 def oppdater_total(ev=None):
     global karbo_i_maltid, min_faktor
     
@@ -321,11 +325,11 @@ def oppdater_total(ev=None):
         if er_penn:
             # Runder til nærmeste heltall for penn
             dose = int(round(dose_raw))
-            document['total_dose_resultat'].text = f"Anbefalt dose (Penn): {dose} enheter"
+            document['total_dose_resultat'].text = f"Anbefalt dose: {dose} enheter"
         else:
-            # Viser 2 desimaler for pumpe (f.eks 3.23)
+            # Pumpe: Viser gram (som input) og beregnet dose (som sjekk)
             dose = round(dose_raw, 2)
-            document['total_dose_resultat'].text = f"Anbefalt dose (Pumpe): {dose} enheter"
+            document['total_dose_resultat'].text = f"Legg inn {karbo_i_maltid}g karbo på pumpen (Gir ca {dose} E)"
     else:
         document['total_dose_resultat'].text = "Mangler tall fra steg 1 eller 2..."
 
@@ -370,7 +374,6 @@ document['beregn_insulin'].bind('click', beregn_insulin)
 document['bruk_manuell_faktor'].bind('click', bruk_manuell_faktor)
 document['nullstill'].bind('click', nullstill)
 
-# Kobler radio-knappene til oppdatering
 document['valg_penn'].bind('change', oppdater_total)
 document['valg_pumpe'].bind('change', oppdater_total)
     </script>
