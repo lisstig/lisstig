@@ -76,7 +76,6 @@
             color: white;
         }
 
-        /* Ny stil for språk-lenken */
         .lang-link {
             float: right;
             text-decoration: none;
@@ -141,10 +140,11 @@
     </div>
 
     <br><br>
-    <button id="nullstill" style="background-color: #e74c3c; color: white;">Nullstill alt</button>
+    <button id="nullstill" style="background-color: #e74c3c; color: white;">Nullstill alt (Sletter også lagret dose)</button>
 
     <script type="text/python">
 from browser import document
+from browser.local_storage import storage  # Vi importerer lagring
 
 # Globale variabler
 karbo_i_maltid = 0
@@ -193,6 +193,9 @@ def beregn_insulin(ev):
             document['insulin_resultat'].text = "Døgndosen kan ikke være 0."
             return
         
+        # LAGRING: Her lagrer vi dosen i nettleseren
+        storage['lagret_dose_no'] = str(total_insulin)
+
         min_faktor = int(500 / total_insulin)
         document['insulin_resultat'].text = f"Din faktor: 1 enhet dekker {min_faktor} gram karbohydrater."
         oppdater_total()
@@ -203,7 +206,6 @@ def oppdater_total():
     global karbo_i_maltid, min_faktor
     
     if karbo_i_maltid > 0 and min_faktor > 0:
-        # Runder av til heltall
         dose = int(round(karbo_i_maltid / min_faktor))
         document['total_dose_resultat'].text = f"Anbefalt dose: {dose} enheter insulin"
     else:
@@ -214,6 +216,10 @@ def nullstill(ev):
     karbo_i_maltid = 0
     min_faktor = 0
     
+    # SLETTER LAGRING: Slik at man kan starte på nytt
+    if 'lagret_dose_no' in storage:
+        del storage['lagret_dose_no']
+
     document['karbohydrater'].value = ""
     document['vekt'].value = ""
     document['direkte_karbo_input'].value = ""
@@ -222,6 +228,13 @@ def nullstill(ev):
     document['karbohydrat_resultat'].text = "Ingen karbohydrater registrert enda."
     document['insulin_resultat'].text = "Resultat vises her..."
     document['total_dose_resultat'].text = "Fyll ut steg 1 og 2 for å se dosen automatisk"
+
+# --- OPPSTART ---
+# Sjekker om vi har lagret noe fra før
+if 'lagret_dose_no' in storage:
+    document['insulin'].value = storage['lagret_dose_no']
+    # Kjører beregningen automatisk slik at faktoren vises med en gang
+    beregn_insulin(None)
 
 # Koblinger
 document['btn_velg_kalkulator'].bind('click', vis_kalkulator)
