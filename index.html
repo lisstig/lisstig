@@ -12,22 +12,20 @@
             font-size: 18px;
             margin: 0;
             padding: 20px;
-            /* BAKGRUNN: Her ligger bildet. Du kan bytte URL-en i parentesen for å endre bilde. */
             background-image: url('https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=2053&auto=format&fit=crop');
             background-size: cover;
             background-position: center;
-            background-attachment: fixed; /* Gjør at bildet står stille når du scroller */
+            background-attachment: fixed;
             min-height: 100vh;
         }
 
-        /* INNHOLDS-BOKS: Denne gjør at teksten er lett å lese oppå bildet */
         .container {
-            background-color: rgba(255, 255, 255, 0.92); /* Hvit farge med 92% synlighet */
+            background-color: rgba(255, 255, 255, 0.95);
             padding: 30px;
-            border-radius: 15px; /* Runde hjørner */
+            border-radius: 15px;
             max-width: 800px;
-            margin: 0 auto; /* Sentrerer boksen */
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2); /* Lager en liten skygge bak boksen */
+            margin: 0 auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
         input, button {
@@ -36,7 +34,7 @@
             margin: 5px 0;
             width: 100%;
             box-sizing: border-box;
-            border-radius: 5px; /* Litt rundere knapper */
+            border-radius: 5px;
             border: 1px solid #ccc;
         }
 
@@ -92,7 +90,7 @@
             padding: 10px;
             font-weight: bold;
             color: #555;
-            transition: background-color 0.3s; /* Gjør overgangen myk */
+            transition: background-color 0.3s;
         }
         .meny-knapp.aktiv {
             background-color: #3498db;
@@ -115,9 +113,9 @@
     </style>
 </head>
 <body onload="brython()">
-
-    <div class="container">
     
+    <div class="container">
+
         <a href="english.html" class="lang-link">🇬🇧 English version</a>
         <div style="clear: both;"></div>
 
@@ -148,14 +146,27 @@
 
         <hr>
 
-        <h2>2. Beregn din Insulin-faktor</h2>
+        <h2>2. Din Insulin-faktor</h2>
         <p><i>(Hvor mange gram karbohydrater 1 enhet insulin dekker)</i></p>
+
+        <div class="meny-container">
+            <button id="btn_velg_500regel" class="meny-knapp aktiv">Bruk 500-regelen</button>
+            <button id="btn_velg_manuell_faktor" class="meny-knapp">Jeg vet faktoren</button>
+        </div>
         
-        <label>Total døgndose insulin (E):</label>
-        <input type="number" id="insulin" placeholder="F.eks 55">
-        
-        <button id="beregn_insulin" style="background-color: #ecf0f1; border: 1px solid #ccc;">Beregn Insulin-faktor</button>
-        <p id="insulin_resultat" class="resultat">Resultat vises her...</p>
+        <div id="faktor_kalkulator_boks">
+            <label>Total døgndose insulin (E):</label>
+            <input type="number" id="insulin" placeholder="F.eks 55">
+            <button id="beregn_insulin" style="background-color: #ecf0f1; border: 1px solid #ccc;">Beregn Insulin-faktor</button>
+        </div>
+
+        <div id="faktor_manuell_boks" style="display: none;">
+            <label>Din insulin-faktor (gram karbo per enhet):</label>
+            <input type="number" id="manuell_faktor_input" placeholder="F.eks 10 eller 9.5">
+            <button id="bruk_manuell_faktor" style="background-color: #ecf0f1; border: 1px solid #ccc;">Bruk denne faktoren</button>
+        </div>
+
+        <p id="insulin_resultat" class="resultat">Ingen faktor valgt enda.</p>
 
         <hr>
 
@@ -169,9 +180,11 @@
         </div>
 
         <br><br>
-        <button id="nullstill" style="background-color: #e74c3c; color: white;">Nullstill alt (Sletter også lagret dose)</button>
+        <button id="nullstill" style="background-color: #e74c3c; color: white;">Nullstill alt (Sletter også lagret data)</button>
 
-    </div> <script type="text/python">
+    </div>
+
+    <script type="text/python">
 from browser import document
 from browser.local_storage import storage
 
@@ -179,6 +192,7 @@ from browser.local_storage import storage
 karbo_i_maltid = 0
 min_faktor = 0
 
+# --- VISNINGSFUNKSJONER (TABS) ---
 def vis_kalkulator(ev):
     document['kalkulator_boks'].style.display = 'block'
     document['direkte_boks'].style.display = 'none'
@@ -191,13 +205,27 @@ def vis_direkte(ev):
     document['btn_velg_kalkulator'].classList.remove('aktiv')
     document['btn_velg_direkte'].classList.add('aktiv')
 
+def vis_500regel(ev):
+    document['faktor_kalkulator_boks'].style.display = 'block'
+    document['faktor_manuell_boks'].style.display = 'none'
+    document['btn_velg_500regel'].classList.add('aktiv')
+    document['btn_velg_manuell_faktor'].classList.remove('aktiv')
+
+def vis_manuell_faktor(ev):
+    document['faktor_kalkulator_boks'].style.display = 'none'
+    document['faktor_manuell_boks'].style.display = 'block'
+    document['btn_velg_500regel'].classList.remove('aktiv')
+    document['btn_velg_manuell_faktor'].classList.add('aktiv')
+
+# --- BEREGNINGSFUNKSJONER ---
+
+# Steg 1
 def beregn_kalkulator(ev):
     global karbo_i_maltid
     try:
         karbohydrater = float(document['karbohydrater'].value)
         vekt = float(document['vekt'].value)
         karbo_i_maltid = int((karbohydrater / 100) * vekt) 
-        
         document['karbohydrat_resultat'].text = f"Beregnet: {karbo_i_maltid} gram karbohydrater."
         oppdater_total()
     except ValueError:
@@ -208,12 +236,12 @@ def bruk_direkte(ev):
     try:
         input_verdi = float(document['direkte_karbo_input'].value)
         karbo_i_maltid = int(input_verdi)
-        
         document['karbohydrat_resultat'].text = f"Satt manuelt: {karbo_i_maltid} gram karbohydrater."
         oppdater_total()
     except ValueError:
         document['karbohydrat_resultat'].text = "Skriv inn et gyldig tall."
 
+# Steg 2
 def beregn_insulin(ev):
     global min_faktor
     try:
@@ -222,18 +250,40 @@ def beregn_insulin(ev):
             document['insulin_resultat'].text = "Døgndosen kan ikke være 0."
             return
         
-        storage['lagret_dose_no'] = str(total_insulin)
+        storage['lagret_dose_no'] = str(total_insulin) # Lagrer døgndosen
+        if 'lagret_faktor_no' in storage: del storage['lagret_faktor_no'] # Sletter evt manuell faktor
 
-        min_faktor = int(500 / total_insulin)
-        document['insulin_resultat'].text = f"Din faktor: 1 enhet dekker {min_faktor} gram karbohydrater."
+        # ENDRET HER: Bruker round(x, 1) i stedet for int() for å tillate desimaler
+        min_faktor = round(500 / total_insulin, 1)
+        
+        document['insulin_resultat'].text = f"Din faktor (500-regelen): 1 enhet dekker {min_faktor} gram karbo."
         oppdater_total()
     except ValueError:
         document['insulin_resultat'].text = "Skriv inn gyldig døgndose."
 
+def bruk_manuell_faktor(ev):
+    global min_faktor
+    try:
+        input_faktor = float(document['manuell_faktor_input'].value)
+        if input_faktor == 0:
+            document['insulin_resultat'].text = "Faktoren kan ikke være 0."
+            return
+
+        storage['lagret_faktor_no'] = str(input_faktor) # Lagrer manuell faktor
+        if 'lagret_dose_no' in storage: del storage['lagret_dose_no'] # Sletter evt døgndose
+
+        min_faktor = input_faktor
+        document['insulin_resultat'].text = f"Din faktor (Manuelt): 1 enhet dekker {min_faktor} gram karbo."
+        oppdater_total()
+    except ValueError:
+        document['insulin_resultat'].text = "Skriv inn et gyldig tall for faktor."
+
+# Steg 3
 def oppdater_total():
     global karbo_i_maltid, min_faktor
     
     if karbo_i_maltid > 0 and min_faktor > 0:
+        # Formelen: Karbo / Faktor. Vi runder til nærmeste hele enhet.
         dose = int(round(karbo_i_maltid / min_faktor))
         document['total_dose_resultat'].text = f"Anbefalt dose: {dose} enheter insulin"
     else:
@@ -244,30 +294,42 @@ def nullstill(ev):
     karbo_i_maltid = 0
     min_faktor = 0
     
-    if 'lagret_dose_no' in storage:
-        del storage['lagret_dose_no']
+    # Sletter alt fra lagring
+    if 'lagret_dose_no' in storage: del storage['lagret_dose_no']
+    if 'lagret_faktor_no' in storage: del storage['lagret_faktor_no']
 
     document['karbohydrater'].value = ""
     document['vekt'].value = ""
     document['direkte_karbo_input'].value = ""
     document['insulin'].value = ""
+    document['manuell_faktor_input'].value = ""
     
     document['karbohydrat_resultat'].text = "Ingen karbohydrater registrert enda."
-    document['insulin_resultat'].text = "Resultat vises her..."
+    document['insulin_resultat'].text = "Ingen faktor valgt enda."
     document['total_dose_resultat'].text = "Fyll ut steg 1 og 2 for å se dosen automatisk"
 
 # --- OPPSTART ---
+# Sjekker om vi har lagret noe fra før
 if 'lagret_dose_no' in storage:
     document['insulin'].value = storage['lagret_dose_no']
+    vis_500regel(None)
     beregn_insulin(None)
+elif 'lagret_faktor_no' in storage:
+    document['manuell_faktor_input'].value = storage['lagret_faktor_no']
+    vis_manuell_faktor(None)
+    bruk_manuell_faktor(None)
 
 # Koblinger
 document['btn_velg_kalkulator'].bind('click', vis_kalkulator)
 document['btn_velg_direkte'].bind('click', vis_direkte)
 
+document['btn_velg_500regel'].bind('click', vis_500regel)
+document['btn_velg_manuell_faktor'].bind('click', vis_manuell_faktor)
+
 document['beregn'].bind('click', beregn_kalkulator)
 document['bruk_direkte'].bind('click', bruk_direkte)
 document['beregn_insulin'].bind('click', beregn_insulin)
+document['bruk_manuell_faktor'].bind('click', bruk_manuell_faktor)
 document['nullstill'].bind('click', nullstill)
     </script>
 </body>
