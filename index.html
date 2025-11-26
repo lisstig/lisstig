@@ -41,10 +41,9 @@
             text-align: center;
         }
         
-        /* Ny stil for advarselen */
         .advarsel {
-            background-color: #fff3cd; /* Lys gul bakgrunn */
-            color: #856404; /* Mørk gul/brun tekst */
+            background-color: #fff3cd; 
+            color: #856404;
             padding: 15px;
             border-radius: 5px;
             margin-top: 15px;
@@ -58,7 +57,6 @@
             border: 1px solid #ddd;
         }
         
-        /* Stil for fanene */
         .meny-container {
             display: flex;
             justify-content: space-between;
@@ -77,10 +75,24 @@
             background-color: #3498db;
             color: white;
         }
+
+        /* Ny stil for språk-lenken */
+        .lang-link {
+            float: right;
+            text-decoration: none;
+            font-size: 0.9em;
+            color: #555;
+            background: #eee;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body onload="brython()">
     
+    <a href="english.html" class="lang-link">🇬🇧 English version</a>
+    <div style="clear: both;"></div>
+
     <h2>1. Hvor mye karbohydrater?</h2>
     
     <div class="meny-container">
