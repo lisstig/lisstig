@@ -10,18 +10,36 @@
         body {
             font-family: sans-serif;
             font-size: 18px;
+            margin: 0;
             padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: #fafafa;
+            /* BAKGRUNN: Her ligger bildet. Du kan bytte URL-en i parentesen for å endre bilde. */
+            background-image: url('https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=2053&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed; /* Gjør at bildet står stille når du scroller */
+            min-height: 100vh;
         }
+
+        /* INNHOLDS-BOKS: Denne gjør at teksten er lett å lese oppå bildet */
+        .container {
+            background-color: rgba(255, 255, 255, 0.92); /* Hvit farge med 92% synlighet */
+            padding: 30px;
+            border-radius: 15px; /* Runde hjørner */
+            max-width: 800px;
+            margin: 0 auto; /* Sentrerer boksen */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); /* Lager en liten skygge bak boksen */
+        }
+
         input, button {
             font-size: 18px;
             padding: 10px;
             margin: 5px 0;
             width: 100%;
             box-sizing: border-box;
+            border-radius: 5px; /* Litt rundere knapper */
+            border: 1px solid #ccc;
         }
+
         .resultat {
             font-weight: bold;
             color: #2c3e50;
@@ -29,7 +47,9 @@
             padding: 10px;
             border-radius: 5px;
             margin-top: 10px;
+            border: 1px solid #ddd;
         }
+
         .hoved-resultat {
             font-weight: bold;
             color: #fff;
@@ -39,6 +59,7 @@
             font-size: 1.2em;
             margin-top: 20px;
             text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         
         .advarsel {
@@ -54,7 +75,8 @@
 
         hr {
             margin: 30px 0;
-            border: 1px solid #ddd;
+            border: 0;
+            border-top: 1px solid #ddd;
         }
         
         .meny-container {
@@ -64,12 +86,13 @@
         }
         .meny-knapp {
             width: 49%;
-            background-color: #ddd;
+            background-color: #e0e0e0;
             border: none;
             cursor: pointer;
             padding: 10px;
             font-weight: bold;
             color: #555;
+            transition: background-color 0.3s; /* Gjør overgangen myk */
         }
         .meny-knapp.aktiv {
             background-color: #3498db;
@@ -84,67 +107,73 @@
             background: #eee;
             padding: 5px 10px;
             border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .lang-link:hover {
+            background-color: #ddd;
         }
     </style>
 </head>
 <body onload="brython()">
-    
-    <a href="english.html" class="lang-link">🇬🇧 English version</a>
-    <div style="clear: both;"></div>
 
-    <h2>1. Hvor mye karbohydrater?</h2>
+    <div class="container">
     
-    <div class="meny-container">
-        <button id="btn_velg_kalkulator" class="meny-knapp aktiv">Bruk Kalkulator</button>
-        <button id="btn_velg_direkte" class="meny-knapp">Jeg vet antallet</button>
-    </div>
+        <a href="english.html" class="lang-link">🇬🇧 English version</a>
+        <div style="clear: both;"></div>
 
-    <div id="kalkulator_boks">
-        <label>Karbohydrater per 100g:</label>
-        <input type="number" id="karbohydrater" placeholder="F.eks 65">
+        <h2 style="margin-top: 0;">1. Hvor mye karbohydrater?</h2>
         
-        <label>Vekt (i gram):</label>
-        <input type="number" id="vekt" placeholder="F.eks 80">
+        <div class="meny-container">
+            <button id="btn_velg_kalkulator" class="meny-knapp aktiv">Bruk Kalkulator</button>
+            <button id="btn_velg_direkte" class="meny-knapp">Jeg vet antallet</button>
+        </div>
+
+        <div id="kalkulator_boks">
+            <label>Karbohydrater per 100g:</label>
+            <input type="number" id="karbohydrater" placeholder="F.eks 65">
+            
+            <label>Vekt (i gram):</label>
+            <input type="number" id="vekt" placeholder="F.eks 80">
+            
+            <button id="beregn" style="background-color: #ecf0f1; border: 1px solid #ccc;">Beregn Karbohydrater</button>
+        </div>
+
+        <div id="direkte_boks" style="display: none;">
+            <label>Total mengde karbohydrater i måltidet:</label>
+            <input type="number" id="direkte_karbo_input" placeholder="F.eks 45">
+            <button id="bruk_direkte" style="background-color: #ecf0f1; border: 1px solid #ccc;">Bruk dette antallet</button>
+        </div>
+
+        <p id="karbohydrat_resultat" class="resultat">Ingen karbohydrater registrert enda.</p>
+
+        <hr>
+
+        <h2>2. Beregn din Insulin-faktor</h2>
+        <p><i>(Hvor mange gram karbohydrater 1 enhet insulin dekker)</i></p>
         
-        <button id="beregn" style="background-color: #ecf0f1; border: 1px solid #ccc;">Beregn Karbohydrater</button>
-    </div>
+        <label>Total døgndose insulin (E):</label>
+        <input type="number" id="insulin" placeholder="F.eks 55">
+        
+        <button id="beregn_insulin" style="background-color: #ecf0f1; border: 1px solid #ccc;">Beregn Insulin-faktor</button>
+        <p id="insulin_resultat" class="resultat">Resultat vises her...</p>
 
-    <div id="direkte_boks" style="display: none;">
-        <label>Total mengde karbohydrater i måltidet:</label>
-        <input type="number" id="direkte_karbo_input" placeholder="F.eks 45">
-        <button id="bruk_direkte" style="background-color: #ecf0f1; border: 1px solid #ccc;">Bruk dette antallet</button>
-    </div>
+        <hr>
 
-    <p id="karbohydrat_resultat" class="resultat">Ingen karbohydrater registrert enda.</p>
+        <h2>3. Din anbefalte dose</h2>
+        
+        <p id="total_dose_resultat" class="hoved-resultat">Fyll ut steg 1 og 2 for å se dosen automatisk</p>
 
-    <hr>
+        <div class="advarsel">
+            <strong>Viktig:</strong> Denne kalkulatoren er kun ment som et veiledende hjelpemiddel. 
+            Du kjenner din diabetes best. Hvis den foreslåtte dosen ikke stemmer overens med din egen erfaring eller vurdering, skal du alltid stole på din egen dømmekraft.
+        </div>
 
-    <h2>2. Beregn din Insulin-faktor</h2>
-    <p><i>(Hvor mange gram karbohydrater 1 enhet insulin dekker)</i></p>
-    
-    <label>Total døgndose insulin (E):</label>
-    <input type="number" id="insulin" placeholder="F.eks 55">
-    
-    <button id="beregn_insulin" style="background-color: #ecf0f1; border: 1px solid #ccc;">Beregn Insulin-faktor</button>
-    <p id="insulin_resultat" class="resultat">Resultat vises her...</p>
+        <br><br>
+        <button id="nullstill" style="background-color: #e74c3c; color: white;">Nullstill alt (Sletter også lagret dose)</button>
 
-    <hr>
-
-    <h2>3. Din anbefalte dose</h2>
-    
-    <p id="total_dose_resultat" class="hoved-resultat">Fyll ut steg 1 og 2 for å se dosen automatisk</p>
-
-    <div class="advarsel">
-        <strong>Viktig:</strong> Denne kalkulatoren er kun ment som et veiledende hjelpemiddel. 
-        Du kjenner din diabetes best. Hvis den foreslåtte dosen ikke stemmer overens med din egen erfaring eller vurdering, skal du alltid stole på din egen dømmekraft.
-    </div>
-
-    <br><br>
-    <button id="nullstill" style="background-color: #e74c3c; color: white;">Nullstill alt (Sletter også lagret dose)</button>
-
-    <script type="text/python">
+    </div> <script type="text/python">
 from browser import document
-from browser.local_storage import storage  # Vi importerer lagring
+from browser.local_storage import storage
 
 # Globale variabler
 karbo_i_maltid = 0
@@ -193,7 +222,6 @@ def beregn_insulin(ev):
             document['insulin_resultat'].text = "Døgndosen kan ikke være 0."
             return
         
-        # LAGRING: Her lagrer vi dosen i nettleseren
         storage['lagret_dose_no'] = str(total_insulin)
 
         min_faktor = int(500 / total_insulin)
@@ -216,7 +244,6 @@ def nullstill(ev):
     karbo_i_maltid = 0
     min_faktor = 0
     
-    # SLETTER LAGRING: Slik at man kan starte på nytt
     if 'lagret_dose_no' in storage:
         del storage['lagret_dose_no']
 
@@ -230,10 +257,8 @@ def nullstill(ev):
     document['total_dose_resultat'].text = "Fyll ut steg 1 og 2 for å se dosen automatisk"
 
 # --- OPPSTART ---
-# Sjekker om vi har lagret noe fra før
 if 'lagret_dose_no' in storage:
     document['insulin'].value = storage['lagret_dose_no']
-    # Kjører beregningen automatisk slik at faktoren vises med en gang
     beregn_insulin(None)
 
 # Koblinger
